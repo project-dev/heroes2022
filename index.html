@@ -1,0 +1,70 @@
+<!DOCTYPE>
+<html lang="ja">
+    <head>
+        <meta http-equiv="Content-Style-Type" content="text/css">
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv="Content-Style-Type" content="text/css">
+        <meta http-equiv="Content-Script-Type" content="text/javascript">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+        <title>ヒーローズリーグ2022作品</title>
+        <link rel="stylesheet" href="./css/dgl.css?version=1.0.0.0">
+        <script src="./script/png/crc32.js"></script>
+        <script src="./script/png/zlib.min.js"></script>
+        <script src="./script/png/png.js"></script>
+        <script src="./script/png/pngutil.js"></script>
+
+        <script src="./script/dgl.devel.js?version=1.0.0.0"></script>
+        <script src="./script/dgl.device.js?version=1.0.0.0"></script>
+        <script src="./script/dgl.audio.js?version=1.0.0.0"></script>
+        <script src="./script/dgl.core.js?version=1.0.0.0"></script>
+        <script>
+    		'use strict';
+            LOG.isDebug = true;
+
+            document.addEventListener('DOMContentLoaded', function() {
+
+                dglInitalize(null, 'gba');
+                // イメージのロード。非同期で読み込む
+                Promise.all([
+                    loadPng("./img/images01.png"),
+                ]).then(result =>{
+                    dglMain.imageMap["images01"] = result[0];
+                    dglMain.png.palette = dglMain.imageMap["images01"].plte;
+                    dglMain.png.trans = dglMain.imageMap["images01"].trns;
+                    dglMain.png.systemPalette = dglMain.png.palette;
+
+                    pngBackBuffer.defPalette = dglMain.png.palette;
+                    pngBackBuffer.defTrans = dglMain.png.trans;
+                }).catch(reject =>{
+                    LOG.error(reject);
+                });
+                
+                dglAudio.loadSound("silent", "./sound/silent.mp3");
+                dglAudio.loadSound("piko01", "./sound/piko01.mp3");
+
+                // シーンの登録
+                createSceneObject("sample01");
+                createDGLObject("sample01", "map").main = (sceneObject)=>{
+                    if("images01" in dglMain.imageMap){
+                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 0, 0);
+                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 8, 0);
+                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 16, 0);
+                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 24, 0);
+                    }
+
+                    if((dglDevice.mouse.event && dglDevice.mouse.event.stateName == "click")
+                    || (dglDevice.touch.event && dglDevice.touch.event.stateName == 'touchstart')){
+                        if(!dglAudio.state["piko01"]){
+                            dglAudio.playSound("piko01");
+                        }
+                    }
+                };
+
+                dglMain.scene.name = "sample01";
+
+            });
+        </script>
+    </head>
+    <body>
+    </body>
+</html>
