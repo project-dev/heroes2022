@@ -13,7 +13,18 @@ const LOG = {
      * 一般ログを出力
      */
     log : (logText)=>{
-        console.log( getDateTimeString(new Date())  + " : [INFO ] : " + logText);
+        let logBoody = getDateTimeString(new Date())  + " : [INFO ] : " + logText;
+        LOG.addHistory(logBoody);
+        console.log( logBoody );
+    },
+
+    /**
+     * 一般ログを出力
+     */
+     info : (logText)=>{
+        let logBoody = getDateTimeString(new Date())  + " : [INFO ] : " + logText;
+        LOG.addHistory(logBoody);
+        console.log( logBoody );
     },
 
     /**
@@ -23,21 +34,34 @@ const LOG = {
         if(!LOG.isDebug){
             return;
         }
-        console.log( getDateTimeString(new Date())   + " : [DEBUG] : " + logText);
+        let logBoody = getDateTimeString(new Date())   + " : [DEBUG] : " + logText;
+        LOG.addHistory(logBoody);
+        console.log( logBoody );
     },
 
     /**
      * 警告ログを出力
      */
     warn : (logText)=>{
-        console.warn( getDateTimeString(new Date())  + " : [WARN ] : " + logText);
+        let logBoody = getDateTimeString(new Date())   + " :  [WARN ] : " + logText;
+        LOG.addHistory(logBoody);
+        console.warn( logBoody );
     },
 
     /**
      * エラーログを出力
      */
     error : (logText)=>{
-        console.error( getDateTimeString(new Date()) + " : [ERROR] :" + logText );
+        let logBoody = getDateTimeString(new Date()) + " : [ERROR] :" + logText;
+        LOG.addHistory(logBoody);
+        console.warn( logBoody );
+    },
+    history:[],
+    addHistory:(logtext)=>{
+        LOG.history.push(logtext);
+        while(LOG.history.length > 20){
+            LOG.history.shift();
+        }
     }
 }
 
@@ -58,7 +82,7 @@ const LOG = {
 function isPhone(){
 	// 判定方法はここを参照した
 	// https://www.site-convert.com/archives/2188
-
+/*  
 	if (window.matchMedia && window.matchMedia('(max-device-width: 640px)').matches) {
 		// スマホ
 		return true;
@@ -66,6 +90,15 @@ function isPhone(){
 		// PC
 		return false;
 	}
+*/
+    if(navigator.userAgent.match(/(iPhone|iPod|Android.*Mobile)/i)){
+        // スマホ（iPhone・Androidスマホ）の場合の処理を記述
+		return true;
+    }else{
+        // PC・タブレットの場合の処理を記述
+		return false;
+    }
+
 }
 
 /**

@@ -8,7 +8,7 @@ let dglMain;
 /**
  * デバッグモードの設定
  */
-let debugMode = true;
+let debugMode = false;
 
 /**
  * 画面モードの定義
@@ -56,6 +56,9 @@ let backCtx;
  * PNGライブラリのバックバッファ
  */
 let pngBackBuffer;
+
+let cds = {};
+
 
 /**
  * DGLの初期化を行います
@@ -136,6 +139,8 @@ function dglInitalize(parentElement, displayModeName){
              */
             name:"",
 
+            prevName:"",
+
             /**
              * シーン変更中かどうか
              */
@@ -181,32 +186,32 @@ function dglInitalize(parentElement, displayModeName){
          */
         mainFunction: ()=>{
 
+            let startDate = new Date();
+
             try{
                 if(!backBuffer || !backBuffer.getContext){
                     return;
                 }
-    
-                var bgw = backBuffer.width;
-                var bgh = backBuffer.height;
+
+                let bgw = backBuffer.width;
+                let bgh = backBuffer.height;
             
-                var w = frontBuffer.width;
-                var h = frontBuffer.height;
-    
-                setSmooth(frontCtx,false);
                 setSmooth(backCtx,false);
                 backCtx.textBaseline = "top";
-                frontCtx.textBaseline = "top";
     
-                // とりあえずクリア
-                clearCanvas(frontCtx, w, h, dglMain.displayInfo.frontBufferBackgroundStyle);
-    
-                // とりあえずクリア
                 clearCanvas(backCtx, bgw, bgh, dglMain.displayInfo.backgroundStyle);
     
                 pngBackBuffer.palette = dglMain.png.systemPalette;
                 pngBackBuffer.defaultPalette = dglMain.png.systemPalette;
                 pngBackBuffer.trans = dglMain.png.trans;
-    
+                pngBackBuffer.fillRect(pngBackBuffer, 0, 0, bgw, bgh, 0);
+
+                if(dglMain.scene.changing){
+                    var sceneObject = dglMain.sceneMap[dglMain.scene.name];
+                    sceneObject.sceneInitalize(sceneObject);
+                    dglMain.scene.changing = false;
+                }
+
                 // シーンの処理
                 if(dglMain.scene.name in dglMain.sceneMap){
                     // シーンの処理
@@ -218,10 +223,6 @@ function dglInitalize(parentElement, displayModeName){
                     }
                 }
     
-                // ここでスマホ判定して、スマホの場合は強制ランドスケープ表示させる
-                var dispW = w;
-                var dispH = h;
-        
                 // PNGのキャンバスを転送する
                 if(pngBackBuffer && dglMain.png.isUse){
                     pngBackBuffer.drawContext(backCtx, pngBackBuffer, 0, 0, 0, 0);
@@ -231,8 +232,50 @@ function dglInitalize(parentElement, displayModeName){
                 if(debugMode){
                     backCtx.beginPath();
                     backCtx.fillStyle = 'rgba(255, 255, 255)';
-                    backCtx.arc( dglDevice.mouse.x, dglDevice.mouse.y, 2, 0 * Math.PI / 180, 360 * Math.PI / 180, false ) ;
+                    backCtx.arc( dglDevice.mouse.x, dglDevice.mouse.y, 3, 0 * Math.PI / 180, 360 * Math.PI / 180, false ) ;
                     backCtx.fill() ;
+                }
+            }finally{
+                // ここでデバイスの情報はリセット
+                if(dglDevice.reset){
+                    dglDevice.reset();                
+                }
+
+                let span = (new Date().getTime() - startDate.getTime());
+
+                // 120FPS想定
+                let frame = 1000 / 60;
+                if(span < frame){
+                    setTimeout(dglMain.mainFunction, (frame - span));
+                }else{
+                    LOG.log("slow");
+                    setTimeout(dglMain.mainFunction, frame);
+                }
+            }
+        },
+        drawMain:(timestamp)=>{
+
+            try{
+                if(!backBuffer || !backBuffer.getContext){
+                    return;
+                }
+
+                let bgw = backBuffer.width;
+                let bgh = backBuffer.height;
+                let dispW = frontBuffer.width;
+                let dispH = frontBuffer.height;
+
+                setSmooth(frontCtx,false);
+                frontCtx.textBaseline = "top";
+                clearCanvas(frontCtx, dispW, dispH, dglMain.displayInfo.frontBufferBackgroundStyle);
+
+                dglMain.fps.counter++;
+                dglMain.fps.fpscount++;
+                var now = new Date();
+                if(now - dglMain.fps.basetime >= 1000){
+                    dglMain.fps.framerate = dglMain.fps.fpscount;
+                    dglMain.fps.fpscount = 0;
+                    dglMain.fps.basetime = new Date();
                 }
     
                 if(dglMain.displayInfo.target == "device"){
@@ -262,19 +305,10 @@ function dglInitalize(parentElement, displayModeName){
     
                     // 画像サイズの半分だけずらして画像を描画する
                     frontCtx.drawImage( backBuffer, dglMain.displayInfo.outX, dglMain.displayInfo.outY, bgw * dglMain.displayInfo.scale, bgh * dglMain.displayInfo.scale );
-                }
-        
-                dglMain.fps.counter++;
-                var now = new Date();
-                if(now - dglMain.fps.basetime >= 1000){
-                    dglMain.fps.framerate = (dglMain.fps.counter * 1000) / (now - dglMain.fps.basetime);
-                    dglMain.fps.fpscount = 0;
-                    dglMain.fps.basetime = new Date();
-                }
-    
+                }            
                 // デバッグ情報
                 if(debugMode){
-                       
+                        
                     // デバッグ情報の描画
                     frontCtx.beginPath();
                     frontCtx.font = "20px PixelMplus10";
@@ -284,7 +318,6 @@ function dglInitalize(parentElement, displayModeName){
                     var padMsgSize;
                     var btnInfoX = 0;
                     var btnInfoY = 0;
-                    
                     padMsg = "FPS      : " + (Math.round(dglMain.fps.framerate * 100) / 100);
                     btnInfoX = 0;
                     btnInfoY = 0;
@@ -294,38 +327,18 @@ function dglInitalize(parentElement, displayModeName){
                     btnInfoX = 0;
                     btnInfoY += 22;
                     textOut(frontCtx, padMsg, btnInfoX, btnInfoY);
-    
-                    padMsg = "mouse    : x=" + dglDevice.mouse.x + ", y=" + dglDevice.mouse.y;
-                    btnInfoX = 0;
-                    btnInfoY += 22;
-                    textOut(frontCtx, padMsg, btnInfoX, btnInfoY);
 
-                    var stateText = dglDevice.mouse.event ? dglDevice.mouse.event.stateName : "";
-                    padMsg = "           state=" + stateText;
-                    btnInfoX = 0;
-                    btnInfoY += 22;
-                    textOut(frontCtx, padMsg, btnInfoX, btnInfoY);
-
-                    padMsg = "touch    : ";
-                    btnInfoX = 0;
-                    btnInfoY += 22;
-                    textOut(frontCtx, padMsg, btnInfoX, btnInfoY);
-
-                    var stateText = dglDevice.touch.event ? dglDevice.touch.event.stateName : "";
-                    padMsg = "           state=" + stateText;
-                    btnInfoX = 0;
-                    btnInfoY += 22;
-                    textOut(frontCtx, padMsg, btnInfoX, btnInfoY);
+                    LOG.history.forEach(logText =>{
+                        btnInfoX = 0;
+                        btnInfoY += 22;
+                        textOut(frontCtx, logText, btnInfoX, btnInfoY);
+                    });
                 }
-    
             }finally{
-                // ここでデバイスの情報はリセット
-                if(dglDevice.reset){
-                    dglDevice.reset();                
-                }
-                window.requestAnimationFrame (dglMain.mainFunction);
+
+                window.requestAnimationFrame (dglMain.drawMain);
             }
-        },
+        }
     }
 
     // フロントバッファとバックバッファの生成
@@ -375,8 +388,22 @@ function dglInitalize(parentElement, displayModeName){
     dglAudioInitalize(parentElement);
 
     // 処理を開始する
-    window.requestAnimationFrame (dglMain.mainFunction);
+    dglMain.mainFunction();
+    window.requestAnimationFrame (dglMain.drawMain);
+}
 
+//---------------------------------------------------------------
+// フレームワーク用描画関係
+//---------------------------------------------------------------
+/**
+ * スムーズ系のフラグせっとぃ
+ * @param {*} ctx 
+ * @param {*} flag 
+ */
+ function setSmooth(ctx, flag){
+	ctx.imageSmoothingEnabled = flag;
+	ctx.mozImageSmoothingEnabled = flag;
+	ctx.webkitImageSmoothingEnabled = flag;
 }
 
 /**
@@ -404,7 +431,7 @@ function clearCanvas(ctx, w, h, style){
 function textOut(ctx, text, x, y){
     ctx.beginPath();
     ctx.font = "20px PixelMplus10";
-    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.fillText(text, x,     y);
     ctx.fillText(text, x + 1, y);
     ctx.fillText(text, x + 2, y);
@@ -417,19 +444,8 @@ function textOut(ctx, text, x, y){
     ctx.fillText(text, x + 1, y + 2);
     ctx.fillText(text, x + 2, y + 2);
 
-    ctx.fillStyle = 'rgba(0,0,0,1)';
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
     ctx.fillText(text, x + 1, y + 1);
-}
-
-/**
- * スムーズ系のフラグせっとぃ
- * @param {*} ctx 
- * @param {*} flag 
- */
-function setSmooth(ctx, flag){
-	ctx.imageSmoothingEnabled = flag;
-	ctx.mozImageSmoothingEnabled = flag;
-	ctx.webkitImageSmoothingEnabled = flag;
 }
 
 /**
@@ -459,6 +475,97 @@ function dglResize(){
 	}
 }
 
+//---------------------------------------------------------------
+// 描画関係
+//---------------------------------------------------------------
+/**
+ * 
+ * @param {*} puttblno 
+ * @param {*} putno 
+ * @param {*} imageName 
+ * @param {*} sscX 
+ * @param {*} scrY 
+ * @param {*} width 
+ * @param {*} heght 
+ * @param {*} rotateFlahg 
+ */
+function setCDSData(puttblno, putno, imageName, srcX, srcY, width, height){
+    try{
+        if(!(puttblno in cds)){
+            cds[puttblno] = {};
+        }
+        if(!(putno in cds[puttblno])){
+            cds[puttblno][putno] = {};
+        }
+        cds[puttblno][putno] = {
+            imageName:imageName,
+            srcX:srcX,
+            srcY:srcY,
+            width:width,
+            height:height,
+        };
+    
+    }catch(e){
+        LOG.error(e);
+    }
+}
+
+/**
+ * バックバッファに描画する
+ * @param {*} puttblno 
+ * @param {*} putno 
+ * @param {*} x 
+ * @param {*} y 
+ */
+function putSprite(puttblno, putno, x, y){
+    let imgInfo = cds[puttblno][putno];
+    let imgObj = dglMain.imageMap[imgInfo.imageName];
+    backCtx.drawImage(
+         imgObj
+        ,imgInfo.srcX
+        ,imgInfo.srcY
+        ,imgInfo.width
+        ,imgInfo.height
+        ,x
+        ,y
+        ,imgInfo.width
+        ,imgInfo.height);
+}
+
+/**
+ * PNG　Canvasに描画する
+ * @param {*} puttblno 
+ * @param {*} putno 
+ * @param {*} x 
+ * @param {*} y 
+ */
+function putSpritePNG(puttblno, putno, x, y){
+
+    if(cds.length <= puttblno ){
+        //LOG.warn("invalid puttblno [" + puttblno +"]");
+        return;
+    }
+
+    if(cds[puttblno].length <= putno ){
+        //LOG.warn("invalid putno [" + puttblno +" , " + putno + "]");
+        return;
+    }
+    let imgInfo = cds[puttblno][putno];
+    let imgObj = dglMain.imageMap[imgInfo.imageName];
+    pngBackBuffer.drawPng(
+         pngBackBuffer
+        ,imgObj
+        ,imgInfo.srcX
+        ,imgInfo.srcY
+        ,imgInfo.width
+        ,imgInfo.height
+        ,x
+        ,y);
+}
+
+//---------------------------------------------------------------
+// シーン関係
+//---------------------------------------------------------------
 /**
  * シーンオブジェクトを生成します。
  * 生成されたシーンは自動的に登録されます。
@@ -472,16 +579,32 @@ function createSceneObject(sceneName){
     }
 
     var scebeObject = {
+        name:sceneName,
         dglObjectList:[],
+        sceneInitalize:(sceneObject)=>{
+            if(sceneObject.onInitalize){
+                sceneObject.onInitalize(sceneObject);
+            }
+            sceneObject.dglObjectList.forEach(dglObj =>{
+                dglObj.initalize(dglObj, sceneObject);
+            });
+        },
+        onInitalize:(sceneObject)=>{},
         sceneMain:(sceneObject)=>{
             sceneObject.dglObjectList.forEach(dglObj =>{
-                dglObj.main(sceneObject);
+                dglObj.main(dglObj, sceneObject);
             });
         },
     };
 
     dglMain.sceneMap[sceneName] = scebeObject;
     return scebeObject;
+}
+
+function sceneChange(nextSceneName){
+    dglMain.scene.prevName = dglMain.scene.name;
+    dglMain.scene.name = nextSceneName;
+    dglMain.scene.changing = true;
 }
 
 /**
@@ -501,10 +624,14 @@ function createDGLObject(sceneName, dglObjectName){
         throw msg;
     }
     var dglObject = {
-        main:(sceneObject)=>{
+        initalize:(sceneObject, dglObject)=>{
+
+        },
+        main:(sceneObject, dglObject)=>{
         }
     };
     dglMain.sceneMap[sceneName].dglObjectList.push(dglObject);
     return dglObject;
 }
+
 

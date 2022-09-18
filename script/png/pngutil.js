@@ -1,5 +1,3 @@
-
-
 /**
  * PNGを描画するための仮想キャンバスを作成します
  * JSONをクラスの替わりに使ってるけど、クラスのようには当然ふるまえないのでちょっと実装がダサいけど気にしない。
@@ -73,9 +71,10 @@ function createCanvas(width, height){
                 // 0バイト目が必ず0になるので、ここで調節する
                 let row = buff.slice(y * (pngW + 1), y * (pngW + 1) + (pngW + 1));
         
-                for(var x = sx; x <= endX; x++ ){
+                for(var x = sx; x < endX; x++ ){
                     var isTrans = false;
-                    let pxColorIdx = row[x];
+                    // ToDo:なぜか戦闘が0っぽいのでさらに1ずらす。原因究明は後回し
+                    let pxColorIdx = row[x+1];
                     trans.forEach(element => {
                         if(element == pxColorIdx){
                             isTrans = true;

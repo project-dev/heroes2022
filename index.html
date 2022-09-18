@@ -8,18 +8,24 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
         <title>ヒーローズリーグ2022作品</title>
         <link rel="stylesheet" href="./css/dgl.css?version=1.0.0.0">
+
         <script src="./script/png/crc32.js"></script>
         <script src="./script/png/zlib.min.js"></script>
+        
         <script src="./script/png/png.js"></script>
         <script src="./script/png/pngutil.js"></script>
 
-        <script src="./script/dgl.devel.js?version=1.0.0.0"></script>
-        <script src="./script/dgl.device.js?version=1.0.0.0"></script>
-        <script src="./script/dgl.audio.js?version=1.0.0.0"></script>
-        <script src="./script/dgl.core.js?version=1.0.0.0"></script>
+        <script src="./script/dgl.devel.js?version=202209181054"></script>
+        <script src="./script/dgl.device.js?version=202209181054"></script>
+        <script src="./script/dgl.audio.js?version=202209181054"></script>
+        <script src="./script/dgl.core.js?version=202209181054"></script>
+        
+        <script src="./script/scene_title.js"></script>
+        <script src="./script/scene_main.js"></script>
         <script>
     		'use strict';
-            LOG.isDebug = true;
+            LOG.isDebug = false;
+            let score = 0;
 
             document.addEventListener('DOMContentLoaded', function() {
 
@@ -35,32 +41,67 @@
 
                     pngBackBuffer.defPalette = dglMain.png.palette;
                     pngBackBuffer.defTrans = dglMain.png.trans;
+
+                    // タイトル
+                    setCDSData(0,   0, "images01",   32,   0, 180,  40);
+
+                    // 草ブロック
+                    setCDSData(1,   0, "images01",   0,   0,   8,   8);
+
+                    // パーティカル
+                    setCDSData(2,   0, "images01",   16,   0,  16,  16);
+                    setCDSData(2,   1, "images01",   16,  16,  16,  16);
+                    setCDSData(2,   2, "images01",   16,  32,  16,  16);
+
+                    // ターゲット１
+                    setCDSData(3,   0, "images01",   0,  48,  16,  16);
+                    setCDSData(3,   1, "images01",   0,  64,  16,  16);
+                    setCDSData(3,   2, "images01",   0,  80,  16,  16);
+                    setCDSData(3,   3, "images01",   0,  96,  16,  16);
+                    setCDSData(3,   4, "images01",   0, 112,  16,  16);
+                    setCDSData(3,   5, "images01",   0,  96,  16,  16);
+                    setCDSData(3,   6, "images01",   0,  80,  16,  16);
+                    setCDSData(3,   7, "images01",   0,  64,  16,  16);
+                    setCDSData(3,   8, "images01",   0,  48,  16,  16);
+
+                    setCDSData(4,   0, "images01",  16,  48,  16,  16);
+                    setCDSData(4,   1, "images01",  16,  64,  16,  16);
+                    setCDSData(4,   2, "images01",  16,  80,  16,  16);
+                    setCDSData(4,   3, "images01",  16,  96,  16,  16);
+                    setCDSData(4,   4, "images01",  16, 112,  16,  16);
+                    setCDSData(4,   5, "images01",  16,  96,  16,  16);
+                    setCDSData(4,   6, "images01",  16,  80,  16,  16);
+                    setCDSData(4,   7, "images01",  16,  64,  16,  16);
+                    setCDSData(4,   8, "images01",  16,  48,  16,  16);
+
+                    // スコア
+                    setCDSData(90,   0, "images01",  32,  40,  26,  16);
+
+                    // スコア用数字
+                    setCDSData(91,   0, "images01",  65,  40,   6,   8);
+                    setCDSData(91,   1, "images01",  73,  40,   6,   8);
+                    setCDSData(91,   2, "images01",  81,  40,   6,   8);
+                    setCDSData(91,   3, "images01",  89,  40,   6,   8);
+                    setCDSData(91,   4, "images01",  97,  40,   6,   8);
+                    setCDSData(91,   5, "images01", 105,  40,   6,   8);
+                    setCDSData(91,   6, "images01", 113,  40,   6,   8);
+                    setCDSData(91,   7, "images01", 121,  40,   6,   8);
+                    setCDSData(91,   8, "images01", 129,  40,   6,   8);
+                    setCDSData(91,   9, "images01", 137,  40,   6,   8);
                 }).catch(reject =>{
                     LOG.error(reject);
                 });
-                
+
+                // silentはいずれフレームワーク内で処理させるようにしたい
+                // そもそも、silent.mp3で鳴らす必要があるのだろうか？
+                // 適当にバッファ作って鳴らすようにしたほうがいいかも
                 dglAudio.loadSound("silent", "./sound/silent.mp3");
                 dglAudio.loadSound("piko01", "./sound/piko01.mp3");
 
-                // シーンの登録
-                createSceneObject("sample01");
-                createDGLObject("sample01", "map").main = (sceneObject)=>{
-                    if("images01" in dglMain.imageMap){
-                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 0, 0);
-                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 8, 0);
-                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 16, 0);
-                        pngBackBuffer.drawPng(pngBackBuffer, dglMain.imageMap["images01"], 0, 0, 8, 8, 24, 0);
-                    }
+                scene_title_register();
+                scene_main_register();
 
-                    if((dglDevice.mouse.event && dglDevice.mouse.event.stateName == "click")
-                    || (dglDevice.touch.event && dglDevice.touch.event.stateName == 'touchstart')){
-                        if(!dglAudio.state["piko01"]){
-                            dglAudio.playSound("piko01");
-                        }
-                    }
-                };
-
-                dglMain.scene.name = "sample01";
+                dglMain.scene.name = "title";
 
             });
         </script>

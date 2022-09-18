@@ -49,25 +49,31 @@ function dglAudioInitalize(){
 
         /**
          * 初期化イベント
+         * オーディオのデコードの完了を待ちたいので、async awaitを指定している。
+         * 本来なら、非同期の処理が発生して待機が必要な場合は、フレームワークで対応できるようにすべき。
+         * 例えば、ローディング画面出したりするなど。
          */
-        onInitalize:()=>{
+        onInitalize: async ()=>{
             LOG.debug("Web Audio Initalize strat");
             window.AudioContext = window.AudioContext || window.webkitAudioContext;
             dglAudio.context = new window.AudioContext();
+            // 登録済みのデータをデコードする
+            // デコードを待ちたいのでawaitで待つ
+            for(let key in dglAudio.audioResponce){
+                await dglAudio.context.decodeAudioData(dglAudio.audioResponce[key]).then(function(buffer) {
+                    dglAudio.audioBufferes[key] = buffer;
+                    dglAudio.state[key]=false;
+                    LOG.debug("onInitalize : decode success " + key);
+                }).catch(() => {
+                    LOG.error("onInitalize : decode error " + key);
+                });
+                // 読み込んだバッファの解放
+                dglAudio.audioResponce[key] = undefined;
+
+            }
             dglAudio.playSound("silent", false);
             LOG.debug("Web Audio Initalize end");
             frontBuffer.removeEventListener(dglAudio.audioInitEventName, dglAudio.onInitalize);
-        },
-
-        /**
-         * 初期化する
-         */
-        initalize:()=>{
-            if(dglAudio.initalized){
-                LOG.log("Audio Initalized");
-                return;
-            }
-            dglAudio.initalized = true;
         },
 
         /**
@@ -108,7 +114,7 @@ function dglAudioInitalize(){
                     return;
                 }
 
-                // 読み込んだバッファをオーディオバッファにデコードする
+                // 読み込み済みのバッファをオーディオバッファにデコードする
                 dglAudio.context.decodeAudioData(dglAudio.audioResponce[name]).then(function(buffer) {
                     dglAudio.audioBufferes[name] = buffer;
                     dglAudio.state[name]=false;
